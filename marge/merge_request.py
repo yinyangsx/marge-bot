@@ -124,6 +124,10 @@ class MergeRequest(gitlab.Resource):
         return self.info['target_branch']
 
     @property
+    def labels(self):
+        return self.info.get('labels', [])
+
+    @property
     def sha(self):
         return self.info['sha']
 

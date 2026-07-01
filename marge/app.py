@@ -159,6 +159,17 @@ def _parse_config(args):  # pylint: disable=too-many-statements
         help='Order marge merges assigned requests. created_at (default), updated_at or assigned_at.\n',
     )
     parser.add_argument(
+        '--target-branch-health-check',
+        action='store_true',
+        help='Skip normal MRs when the target branch latest completed CI failed.\n',
+    )
+    parser.add_argument(
+        '--oncall-fix-label',
+        type=str,
+        default='oncall fix',
+        help='Label that allows an MR to merge while its target branch is unhealthy.\n',
+    )
+    parser.add_argument(
         '--approval-reset-timeout',
         type=time_interval,
         default='0s',
@@ -349,6 +360,8 @@ def main(args=None):
                 use_merge_commit_batches=options.use_merge_commit_batches,
                 skip_ci_batches=options.skip_ci_batches,
                 guarantee_final_pipeline=options.guarantee_final_pipeline,
+                target_branch_health_check=options.target_branch_health_check,
+                oncall_fix_label=options.oncall_fix_label,
             ),
             batch=options.batch,
             cli=options.cli,

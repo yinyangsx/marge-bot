@@ -71,13 +71,17 @@ class TestMergeRequest:
         assert self.merge_request.state == 'opened'
         assert self.merge_request.source_branch == 'useless_new_feature'
         assert self.merge_request.target_branch == 'master'
+        assert self.merge_request.labels == []
         assert self.merge_request.sha == 'dead4g00d'
         assert self.merge_request.source_project_id == 5678
         assert self.merge_request.target_project_id == 1234
         assert self.merge_request.work_in_progress is False
 
-        self._load({'assignees': []})
+        self._load(dict(INFO, assignees=[]))
         assert self.merge_request.assignee_ids == []
+
+        self._load(dict(INFO, labels=['oncall fix']))
+        assert self.merge_request.labels == ['oncall fix']
 
     def test_comment(self):
         self.merge_request.comment('blah')

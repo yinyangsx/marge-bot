@@ -178,13 +178,33 @@ class Bot:
                 return
             except git.GitError as err:
                 log.exception('BatchMergeJob failed: %s', err)
-        log.info('Attempting to merge the oldest MR...')
-        merge_request = merge_requests[0]
+        log.info('Attempting to merge the oldest eligible MR...')
+        merge_request = self._get_next_single_merge_request(project, repo, merge_requests)
+        if merge_request is None:
+            log.info('No eligible MR to merge at this point...')
+            return
         merge_job = self._get_single_job(
             project=project, merge_request=merge_request, repo=repo,
             options=self._config.merge_opts,
         )
         merge_job.execute()
+
+    def _get_next_single_merge_request(self, project, repo, merge_requests):
+        merge_job = job.MergeJob(
+            api=self._api,
+            user=self.user,
+            project=project,
+            repo=repo,
+            options=self._config.merge_opts,
+        )
+        for merge_request in merge_requests:
+            try:
+                merge_job.ensure_target_branch_is_healthy(merge_request)
+            except job.SkipMerge as err:
+                log.warning('Skipping MR !%s: %s', merge_request.iid, err.reason)
+            else:
+                return merge_request
+        return None
 
     def _get_single_job(self, project, merge_request, repo, options):
         return single_merge_job.SingleMergeJob(

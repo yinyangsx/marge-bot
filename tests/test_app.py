@@ -239,6 +239,23 @@ def test_merge_order_assigned():
             assert bot.config.merge_order == 'assigned_at'
 
 
+def test_target_branch_health_check():
+    with env(MARGE_AUTH_TOKEN="NON-ADMIN-TOKEN", MARGE_SSH_KEY="KEY", MARGE_GITLAB_URL='http://foo.com'):
+        with main("--target-branch-health-check") as bot:
+            assert bot.config.merge_opts == job.MergeJobOptions.default(
+                target_branch_health_check=True,
+            )
+
+
+def test_oncall_fix_label():
+    with env(MARGE_AUTH_TOKEN="NON-ADMIN-TOKEN", MARGE_SSH_KEY="KEY", MARGE_GITLAB_URL='http://foo.com'):
+        with main("--target-branch-health-check --oncall-fix-label='production fix'") as bot:
+            assert bot.config.merge_opts == job.MergeJobOptions.default(
+                target_branch_health_check=True,
+                oncall_fix_label='production fix',
+            )
+
+
 # FIXME: I'd reallly prefer this to be a doctest, but adding --doctest-modules
 # seems to seriously mess up the test run
 def test_time_interval():

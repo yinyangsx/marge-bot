@@ -1,5 +1,5 @@
 # pylint: disable=protected-access
-from unittest.mock import ANY, patch, create_autospec
+from unittest.mock import ANY, MagicMock, patch, create_autospec
 
 import pytest
 
@@ -28,6 +28,22 @@ class TestBatchJob:
 
     def _mock_merge_request(self, **options):
         return create_autospec(marge.merge_request.MergeRequest, spec_set=True, **options)
+
+    def _mergeable_merge_request(self, batch_merge_job, **options):
+        params = {
+            'assignee_ids': [batch_merge_job._user.id],
+            'state': 'opened',
+            'work_in_progress': False,
+            'squash': False,
+            'blocking_discussions_resolved': True,
+            'labels': [],
+            'target_project_id': 1234,
+            'target_branch': 'master',
+        }
+        params.update(options)
+        merge_request = self._mock_merge_request(**params)
+        merge_request.fetch_approvals.return_value.sufficient = True
+        return merge_request
 
     def get_batch_merge_job(self, api, mocklab, **batch_merge_kwargs):
         project_id = mocklab.project_info['id']
@@ -129,6 +145,47 @@ class TestBatchJob:
             batch_merge_job.ensure_mergeable_mr(merge_request)
 
         assert str(exc_info.value) == 'This MR has not passed CI.'
+
+    def test_target_branch_health_check_skips_batch_mr_without_unassigning(self, api, mocklab):
+        with patch('marge.job.Commit', autospec=True) as commit_class:
+            batch_merge_job = self.get_batch_merge_job(
+                api, mocklab,
+                options=MergeJobOptions.default(target_branch_health_check=True),
+            )
+            merge_request = self._mergeable_merge_request(batch_merge_job)
+            commit = MagicMock()
+            commit.statuses.return_value = [{'status': 'failed'}]
+            commit_class.commits_by_branch.return_value = [commit]
+
+            mergeable_mrs = batch_merge_job.get_mergeable_mrs([merge_request])
+
+            assert mergeable_mrs == []
+            merge_request.assign_to.assert_not_called()
+            merge_request.unassign.assert_not_called()
+            merge_request.comment.assert_not_called()
+
+    @patch.object(BatchMergeJob, 'get_mr_ci_status')
+    def test_target_branch_health_check_allows_oncall_fix_batch_mr(
+            self, bmj_get_mr_ci_status, api, mocklab,
+    ):
+        with patch('marge.job.Commit', autospec=True) as commit_class:
+            batch_merge_job = self.get_batch_merge_job(
+                api, mocklab,
+                options=MergeJobOptions.default(
+                    target_branch_health_check=True,
+                    oncall_fix_label='production fix',
+                ),
+            )
+            bmj_get_mr_ci_status.return_value = 'success'
+            merge_request = self._mergeable_merge_request(
+                batch_merge_job,
+                labels=['production fix'],
+            )
+
+            mergeable_mrs = batch_merge_job.get_mergeable_mrs([merge_request])
+
+            assert mergeable_mrs == [merge_request]
+            commit_class.commits_by_branch.assert_not_called()
 
     def test_push_batch(self, api, mocklab):
         batch_merge_job = self.get_batch_merge_job(api, mocklab)

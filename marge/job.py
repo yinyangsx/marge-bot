@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from . import git, gitlab
 from .branch import Branch
+from .commit import Commit
 from .interval import IntervalUnion
 from .merge_request import MergeRequestRebaseFailed
 from .project import Project
@@ -23,6 +24,7 @@ class MergeJob:
         self._repo = repo
         self._options = options
         self._merge_timeout = options.ci_timeout
+        self._target_branch_ci_status_cache = {}
 
     @property
     def repo(self):
@@ -43,6 +45,8 @@ class MergeJob:
         merge_request.refetch_info()
         log.info('Ensuring MR !%s is mergeable', merge_request.iid)
         log.debug('Ensuring MR %r is mergeable', merge_request)
+
+        self.ensure_target_branch_is_healthy(merge_request)
 
         if merge_request.work_in_progress:
             raise CannotMerge("Sorry, I can't merge requests marked as Work-In-Progress!")
@@ -73,6 +77,50 @@ class MergeJob:
 
         if self._user.id not in merge_request.assignee_ids:
             raise SkipMerge('It is not assigned to me anymore!')
+
+    def ensure_target_branch_is_healthy(self, merge_request):
+        if not self._options.target_branch_health_check:
+            return
+
+        oncall_fix_label = self._options.oncall_fix_label
+        if oncall_fix_label in merge_request.labels:
+            log.info(
+                'MR !%s has oncall fix label %r; skipping target branch health gate',
+                merge_request.iid,
+                oncall_fix_label,
+            )
+            return
+
+        target_branch_ci_status = self.get_target_branch_ci_status(merge_request)
+        if target_branch_ci_status == 'failed':
+            raise SkipMerge(
+                'Target branch {0.target_branch} is unhealthy; only MRs labeled {1!r} can merge.'.format(
+                    merge_request,
+                    oncall_fix_label,
+                )
+            )
+
+    def get_target_branch_ci_status(self, merge_request):
+        cache_key = (merge_request.target_project_id, merge_request.target_branch)
+        if cache_key not in self._target_branch_ci_status_cache:
+            commits = Commit.commits_by_branch(
+                project_id=merge_request.target_project_id,
+                branch=merge_request.target_branch,
+                api=self._api,
+            )
+            latest_terminal_status = None
+            for commit in commits:
+                latest_terminal_status = next(
+                    (
+                        status['status'] for status in commit.statuses()
+                        if status['status'] not in ('running', 'pending')
+                    ),
+                    None,
+                )
+                if latest_terminal_status is not None:
+                    break
+            self._target_branch_ci_status_cache[cache_key] = latest_terminal_status
+        return self._target_branch_ci_status_cache[cache_key]
 
     def add_trailers(self, merge_request):
 
@@ -461,6 +509,8 @@ JOB_OPTIONS = [
     'use_merge_commit_batches',
     'skip_ci_batches',
     'guarantee_final_pipeline',
+    'target_branch_health_check',
+    'oncall_fix_label',
 ]
 
 
@@ -477,7 +527,7 @@ class MergeJobOptions(namedtuple('MergeJobOptions', JOB_OPTIONS)):
             add_tested=False, add_part_of=False, add_reviewers=False, reapprove=False,
             approval_timeout=None, embargo=None, ci_timeout=None, fusion=Fusion.rebase,
             use_no_ff_batches=False, use_merge_commit_batches=False, skip_ci_batches=False,
-            guarantee_final_pipeline=False,
+            guarantee_final_pipeline=False, target_branch_health_check=False, oncall_fix_label='oncall fix',
     ):
         approval_timeout = approval_timeout or timedelta(seconds=0)
         embargo = embargo or IntervalUnion.empty()
@@ -495,6 +545,8 @@ class MergeJobOptions(namedtuple('MergeJobOptions', JOB_OPTIONS)):
             use_merge_commit_batches=use_merge_commit_batches,
             skip_ci_batches=skip_ci_batches,
             guarantee_final_pipeline=guarantee_final_pipeline,
+            target_branch_health_check=target_branch_health_check,
+            oncall_fix_label=oncall_fix_label,
         )
 
 

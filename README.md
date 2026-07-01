@@ -104,6 +104,12 @@ optional arguments:
   --merge-order {created_at,updated_at,assigned_at}
                         Order marge merges assigned requests. created_at (default), updated_at or assigned_at.
                            [env var: MARGE_MERGE_ORDER] (default: created_at)
+  --target-branch-health-check
+                        Skip normal MRs when the target branch latest completed CI failed.
+                           [env var: MARGE_TARGET_BRANCH_HEALTH_CHECK] (default: False)
+  --oncall-fix-label ONCALL_FIX_LABEL
+                        Label that allows an MR to merge while its target branch is unhealthy.
+                           [env var: MARGE_ONCALL_FIX_LABEL] (default: oncall fix)
   --approval-reset-timeout APPROVAL_RESET_TIMEOUT
                         How long to wait for approvals to reset after pushing.
                         Only useful with the "new commits remove all approvals" option in a project's settings.
@@ -157,6 +163,8 @@ batch: false
 git-timeout: 120s
 gitlab-url: "https://gitlab.example.com"
 impersonate-approvers: true
+target-branch-health-check: false
+oncall-fix-label: oncall fix
 project-regexp: .*
 # choose one way of specifying the SSH key
 #ssh-key: KEY
@@ -463,6 +471,22 @@ prevent shipping late on a Friday, but still want to allow marking merge request
 More than one embargo period can be specified, separated by commas. Any merge
 request assigned to her during an embargo period, will be merged in only once all
 embargoes are over.
+
+
+## Target branch health checks
+
+If you pass `--target-branch-health-check`, marge-bot checks the target branch
+before processing a merge request. It walks commits on the MR's target branch
+from newest to oldest and checks their GitLab commit statuses. Statuses that
+are still `running` or `pending` are ignored. If the latest completed status is
+`failed`, the target branch is treated as unhealthy and normal merge requests
+are skipped.
+
+Merge requests with the label configured by `--oncall-fix-label` are still
+eligible while the target branch is unhealthy. The default label is
+`oncall fix`. In single-MR mode marge-bot keeps scanning the already ordered
+queue until it finds the first eligible merge request, so earlier normal merge
+requests do not block an oncall fix merge request behind them.
 
 
 ## Batching Merge Requests
