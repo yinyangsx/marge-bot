@@ -1,4 +1,4 @@
-# pylint: disable=protected-access
+# pylint: disable=protected-access,duplicate-code
 from unittest.mock import ANY, MagicMock, patch, create_autospec
 
 import pytest
@@ -146,7 +146,7 @@ class TestBatchJob:
 
         assert str(exc_info.value) == 'This MR has not passed CI.'
 
-    def test_target_branch_health_check_skips_batch_mr_without_unassigning(self, api, mocklab):
+    def test_target_health_skips_batch_without_unassigning(self, api, mocklab):
         with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             batch_merge_job = self.get_batch_merge_job(
                 api, mocklab,
@@ -157,7 +157,7 @@ class TestBatchJob:
 
             mergeable_mrs = batch_merge_job.get_mergeable_mrs([merge_request])
 
-            assert mergeable_mrs == []
+            assert not mergeable_mrs
             merge_request.assign_to.assert_not_called()
             merge_request.unassign.assert_not_called()
             merge_request.comment.assert_not_called()
@@ -248,9 +248,8 @@ class TestBatchJob:
 
         api.add_transition(
             GET(
-                '/projects/{project_iid}/repository/branches/useless_new_feature'.format(
-                    project_iid=mocklab.merge_request_info['source_project_id'],
-                ),
+                f"/projects/{mocklab.merge_request_info['source_project_id']}"
+                "/repository/branches/useless_new_feature",
             ),
             Ok({'commit': commit(commit_id='abc', status='running')}),
         )

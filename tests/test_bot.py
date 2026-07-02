@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 from unittest.mock import MagicMock, patch
 
 import marge.bot
@@ -36,7 +37,7 @@ class TestBot:
         merge_request.target_branch = 'master'
         return merge_request
 
-    def test_single_mode_scans_for_oncall_fix_when_target_branch_failed(self):
+    def test_single_mode_scans_for_oncall_fix(self):
         bot = marge.bot.Bot(api=MagicMock(), config=self._bot_config())
         project = MagicMock()
         repo = MagicMock()
@@ -65,7 +66,7 @@ class TestBot:
         single_job.execute.assert_called_once_with()
         assert target_ci_status.call_count == 2
 
-    def test_single_mode_does_not_merge_when_target_failed_and_no_oncall_fix_mr(self):
+    def test_single_mode_skips_failed_target(self):
         bot = marge.bot.Bot(api=MagicMock(), config=self._bot_config())
         project = MagicMock()
         repo = MagicMock()

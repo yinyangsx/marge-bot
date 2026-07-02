@@ -474,8 +474,6 @@ class TestUpdateAndAccept:  # pylint: disable=too-many-public-methods
 
         # pylint: disable=unused-argument
         def push_effects(remote_url, remote_branch, old_sha, new_sha):
-            nonlocal mocklab, target_branch, remote_target_repo
-
             if api.state == 'initial':
                 assert old_sha == INITIAL_MR_SHA
                 assert new_sha == first_rewritten_sha

@@ -1,4 +1,4 @@
-# pylint: disable=protected-access
+# pylint: disable=protected-access,duplicate-code
 from datetime import timedelta
 from unittest.mock import ANY, MagicMock, patch, create_autospec
 
@@ -144,7 +144,7 @@ class TestJob:
             pipeline_class.pipelines_by_branch.assert_not_called()
 
     @pytest.mark.parametrize('terminal_status', ['success', 'skipped', 'canceled'])
-    def test_target_branch_health_check_allows_non_failed_terminal_status(self, terminal_status):
+    def test_target_health_allows_non_failed_status(self, terminal_status):
         with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             merge_job = self.get_merge_job(
                 options=MergeJobOptions.default(target_branch_health_check=True)

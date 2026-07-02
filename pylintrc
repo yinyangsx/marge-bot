@@ -11,9 +11,20 @@ argument-rgx=(([a-z_][a-z0-9_]{2,40})|(_[a-z0-9_]*)|(__[a-z][a-z0-9_]+__))$
 
 [MESSAGE CONTROL]
 disable=bad-continuation,
+        broad-exception-raised,
+        consider-using-f-string,
+        consider-using-from-import,
+        consider-using-max-builtin,
+        consider-using-with,
         fixme,
+        invalid-format-index,
         missing-docstring,
+        no-else-raise,
         no-self-use,
+        too-many-arguments,
+        too-many-positional-arguments,
+        too-many-public-methods,
+        use-dict-literal,
         unsubscriptable-object
 
 [SIMILARITIES]
