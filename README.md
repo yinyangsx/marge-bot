@@ -476,11 +476,10 @@ embargoes are over.
 ## Target branch health checks
 
 If you pass `--target-branch-health-check`, marge-bot checks the target branch
-before processing a merge request. It walks commits on the MR's target branch
-from newest to oldest and checks their GitLab commit statuses. Statuses that
-are still `running` or `pending` are ignored. If the latest completed status is
-`failed`, the target branch is treated as unhealthy and normal merge requests
-are skipped.
+before processing a merge request. It queries the latest completed GitLab
+pipeline for the MR's target branch. Pipelines that are still `running` or
+`pending` are ignored. If the latest completed pipeline status is `failed`, the
+target branch is treated as unhealthy and normal merge requests are skipped.
 
 Merge requests with the label configured by `--oncall-fix-label` are still
 eligible while the target branch is unhealthy. The default label is

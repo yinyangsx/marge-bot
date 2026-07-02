@@ -96,16 +96,16 @@ class TestJob:
             assert r_ci_status == 'success'
 
     def test_target_branch_health_check_disabled(self):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             merge_job = self.get_merge_job()
             merge_request = self._mergeable_merge_request(merge_job)
 
             merge_job.ensure_mergeable_mr(merge_request)
 
-            commit_class.commits_by_branch.assert_not_called()
+            pipeline_class.pipelines_by_branch.assert_not_called()
 
     def test_target_branch_health_check_blocks_failed_target(self):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             merge_job = self.get_merge_job(
                 options=MergeJobOptions.default(
                     target_branch_health_check=True,
@@ -113,32 +113,24 @@ class TestJob:
                 )
             )
             merge_request = self._mergeable_merge_request(merge_job)
-            first_commit = MagicMock()
-            first_commit.statuses.return_value = [
-                {'status': 'running'},
-                {'status': 'pending'},
-            ]
-            second_commit = MagicMock()
-            second_commit.statuses.return_value = [
-                {'status': 'failed'},
-            ]
-            commit_class.commits_by_branch.return_value = [first_commit, second_commit]
+            pipeline_class.pipelines_by_branch.return_value = [MagicMock(status='failed')]
 
             with pytest.raises(SkipMerge) as exc_info:
                 merge_job.ensure_mergeable_mr(merge_request)
 
-            commit_class.commits_by_branch.assert_called_once_with(
+            pipeline_class.pipelines_by_branch.assert_called_once_with(
                 project_id=merge_request.target_project_id,
                 branch=merge_request.target_branch,
                 api=merge_job._api,
+                scope='finished',
+                order_by='id',
+                sort='desc',
             )
-            first_commit.statuses.assert_called_once_with()
-            second_commit.statuses.assert_called_once_with()
             merge_request.fetch_approvals.assert_not_called()
             assert 'Target branch master is unhealthy' in exc_info.value.reason
 
     def test_target_branch_health_check_allows_oncall_fix_label(self):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             merge_job = self.get_merge_job(
                 options=MergeJobOptions.default(
                     target_branch_health_check=True,
@@ -149,37 +141,26 @@ class TestJob:
 
             merge_job.ensure_mergeable_mr(merge_request)
 
-            commit_class.commits_by_branch.assert_not_called()
+            pipeline_class.pipelines_by_branch.assert_not_called()
 
     @pytest.mark.parametrize('terminal_status', ['success', 'skipped', 'canceled'])
     def test_target_branch_health_check_allows_non_failed_terminal_status(self, terminal_status):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             merge_job = self.get_merge_job(
                 options=MergeJobOptions.default(target_branch_health_check=True)
             )
             merge_request = self._mergeable_merge_request(merge_job)
-            commit = MagicMock()
-            commit.statuses.return_value = [
-                {'status': 'running'},
-                {'status': 'pending'},
-                {'status': terminal_status},
-            ]
-            commit_class.commits_by_branch.return_value = [commit]
+            pipeline_class.pipelines_by_branch.return_value = [MagicMock(status=terminal_status)]
 
             merge_job.ensure_mergeable_mr(merge_request)
 
-    def test_target_branch_health_check_allows_no_terminal_status(self):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+    def test_target_branch_health_check_allows_no_finished_pipeline(self):
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             merge_job = self.get_merge_job(
                 options=MergeJobOptions.default(target_branch_health_check=True)
             )
             merge_request = self._mergeable_merge_request(merge_job)
-            commit = MagicMock()
-            commit.statuses.return_value = [
-                {'status': 'running'},
-                {'status': 'pending'},
-            ]
-            commit_class.commits_by_branch.return_value = [commit]
+            pipeline_class.pipelines_by_branch.return_value = []
 
             merge_job.ensure_mergeable_mr(merge_request)
 

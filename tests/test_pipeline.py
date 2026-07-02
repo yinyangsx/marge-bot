@@ -30,6 +30,30 @@ class TestPipeline:
         ))
         assert [pl.info for pl in result] == [pl1, pl2]
 
+    def test_pipelines_by_branch_with_filters(self):
+        api = self.api
+        api.call = Mock(return_value=[INFO])
+
+        result = Pipeline.pipelines_by_branch(
+            project_id=1234,
+            branch=INFO['ref'],
+            api=api,
+            scope='finished',
+            source='external',
+        )
+
+        api.call.assert_called_once_with(GET(
+            '/projects/1234/pipelines',
+            {
+                'ref': INFO['ref'],
+                'order_by': 'id',
+                'sort': 'desc',
+                'scope': 'finished',
+                'source': 'external',
+            },
+        ))
+        assert [pl.info for pl in result] == [INFO]
+
     def test_pipelines_by_merge_request(self):
         api = self.api
         pl1, pl2 = INFO, dict(INFO, id=48)

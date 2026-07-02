@@ -13,6 +13,8 @@ class Pipeline(gitlab.Resource):
     def pipelines_by_branch(
             cls, project_id, branch, api, *,
             ref=None,
+            scope=None,
+            source=None,
             status=None,
             order_by='id',
             sort='desc',
@@ -22,6 +24,10 @@ class Pipeline(gitlab.Resource):
             'order_by': order_by,
             'sort': sort,
         }
+        if scope is not None:
+            params['scope'] = scope
+        if source is not None:
+            params['source'] = source
         if status is not None:
             params['status'] = status
         pipelines_info = api.call(GET(

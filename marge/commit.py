@@ -21,14 +21,6 @@ class Commit(gitlab.Resource):
         return cls(api, dict(info, project_id=project_id))
 
     @classmethod
-    def commits_by_branch(cls, project_id, branch, api):
-        infos = api.collect_all_pages(GET(
-            '/projects/{project_id}/repository/commits'.format(project_id=project_id),
-            {'ref_name': branch},
-        ))
-        return [cls(api, dict(info, project_id=project_id)) for info in infos]
-
-    @classmethod
     def last_on_branch(cls, project_id, branch, api):
         info = api.call(GET(
             '/projects/{project_id}/repository/branches/{branch}'.format(
@@ -37,11 +29,6 @@ class Commit(gitlab.Resource):
             ),
         ))['commit']
         return cls(api, dict(info, project_id=project_id))
-
-    def statuses(self):
-        return self._api.collect_all_pages(GET(
-            '/projects/{0.project_id}/repository/commits/{0.id}/statuses'.format(self),
-        ))
 
     @property
     def project_id(self):

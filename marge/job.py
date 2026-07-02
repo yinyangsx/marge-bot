@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 
 from . import git, gitlab
 from .branch import Branch
-from .commit import Commit
 from .interval import IntervalUnion
 from .merge_request import MergeRequestRebaseFailed
 from .project import Project
@@ -24,7 +23,6 @@ class MergeJob:
         self._repo = repo
         self._options = options
         self._merge_timeout = options.ci_timeout
-        self._target_branch_ci_status_cache = {}
 
     @property
     def repo(self):
@@ -101,26 +99,17 @@ class MergeJob:
             )
 
     def get_target_branch_ci_status(self, merge_request):
-        cache_key = (merge_request.target_project_id, merge_request.target_branch)
-        if cache_key not in self._target_branch_ci_status_cache:
-            commits = Commit.commits_by_branch(
-                project_id=merge_request.target_project_id,
-                branch=merge_request.target_branch,
-                api=self._api,
-            )
-            latest_terminal_status = None
-            for commit in commits:
-                latest_terminal_status = next(
-                    (
-                        status['status'] for status in commit.statuses()
-                        if status['status'] not in ('running', 'pending')
-                    ),
-                    None,
-                )
-                if latest_terminal_status is not None:
-                    break
-            self._target_branch_ci_status_cache[cache_key] = latest_terminal_status
-        return self._target_branch_ci_status_cache[cache_key]
+        pipelines = Pipeline.pipelines_by_branch(
+            project_id=merge_request.target_project_id,
+            branch=merge_request.target_branch,
+            api=self._api,
+            scope='finished',
+            order_by='id',
+            sort='desc',
+        )
+        if not pipelines:
+            return None
+        return pipelines[0].status
 
     def add_trailers(self, merge_request):
 

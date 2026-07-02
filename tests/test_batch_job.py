@@ -147,15 +147,13 @@ class TestBatchJob:
         assert str(exc_info.value) == 'This MR has not passed CI.'
 
     def test_target_branch_health_check_skips_batch_mr_without_unassigning(self, api, mocklab):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             batch_merge_job = self.get_batch_merge_job(
                 api, mocklab,
                 options=MergeJobOptions.default(target_branch_health_check=True),
             )
             merge_request = self._mergeable_merge_request(batch_merge_job)
-            commit = MagicMock()
-            commit.statuses.return_value = [{'status': 'failed'}]
-            commit_class.commits_by_branch.return_value = [commit]
+            pipeline_class.pipelines_by_branch.return_value = [MagicMock(status='failed')]
 
             mergeable_mrs = batch_merge_job.get_mergeable_mrs([merge_request])
 
@@ -168,7 +166,7 @@ class TestBatchJob:
     def test_target_branch_health_check_allows_oncall_fix_batch_mr(
             self, bmj_get_mr_ci_status, api, mocklab,
     ):
-        with patch('marge.job.Commit', autospec=True) as commit_class:
+        with patch('marge.job.Pipeline', autospec=True) as pipeline_class:
             batch_merge_job = self.get_batch_merge_job(
                 api, mocklab,
                 options=MergeJobOptions.default(
@@ -185,7 +183,7 @@ class TestBatchJob:
             mergeable_mrs = batch_merge_job.get_mergeable_mrs([merge_request])
 
             assert mergeable_mrs == [merge_request]
-            commit_class.commits_by_branch.assert_not_called()
+            pipeline_class.pipelines_by_branch.assert_not_called()
 
     def test_push_batch(self, api, mocklab):
         batch_merge_job = self.get_batch_merge_job(api, mocklab)

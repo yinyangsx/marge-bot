@@ -45,18 +45,6 @@ class TestProjectWithCommits:
         ))
         assert commit.info == dict(INFO, project_id=1234)
 
-    def test_commits_by_branch(self):
-        api = self.api
-        api.collect_all_pages = Mock(return_value=[INFO])
-
-        commits = Commit.commits_by_branch(project_id=1234, branch='master', api=api)
-
-        api.collect_all_pages.assert_called_once_with(GET(
-            '/projects/1234/repository/commits',
-            {'ref_name': 'master'},
-        ))
-        assert [commit.info for commit in commits] == [dict(INFO, project_id=1234)]
-
     def test_last_on_branch(self):
         self.api.call.side_effect = lambda *_, **__: {'commit': INFO}
         commit = Commit.last_on_branch(project_id=1234, branch='foobar-branch', api=self.api)
@@ -67,19 +55,6 @@ class TestProjectWithCommits:
         self.api.call.side_effect = lambda *_, **__: {'commit': INFO}
         Commit.last_on_branch(project_id=1234, branch='foo/bar', api=self.api)
         self.api.call.assert_called_once_with(GET('/projects/1234/repository/branches/foo%2Fbar'))
-
-    def test_statuses(self):
-        api = self.api
-        statuses = [{'status': 'success'}]
-        api.collect_all_pages = Mock(return_value=statuses)
-        commit = Commit(api=api, info=dict(INFO, project_id=1234))
-
-        result = commit.statuses()
-
-        api.collect_all_pages.assert_called_once_with(GET(
-            '/projects/1234/repository/commits/6104942438c14ec7bd21c6cd5bd995272b3faff6/statuses'
-        ))
-        assert result == statuses
 
     def test_properties(self):
         commit = Commit(api=self.api, info=dict(INFO, project_id=1234))
