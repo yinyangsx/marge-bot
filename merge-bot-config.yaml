@@ -1,0 +1,12 @@
+add-part-of: true
+add-reviewers: true
+add-tested: true
+impersonate-approvers: true
+ci-timeout: 60min
+gitlab-url: "https://gitlab.infiscale.dev"
+project-regexp: "shutong/test-merge-bot"
+auth-token: ""
+ssh-key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  replace-with-private-key
+  -----END OPENSSH PRIVATE KEY-----

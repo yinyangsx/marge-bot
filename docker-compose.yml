@@ -1,0 +1,18 @@
+services:
+  marge-bot:
+    image: ${MARGE_IMAGE:-harbor.infiscale.dev/workflow/merge-bot:latest}
+    build:
+      context: .
+    restart: on-failure
+    command:
+      - --config-file=/configuration/marge-bot-config.yaml
+    volumes:
+      - type: bind
+        source: ./merge-bot-config.yaml
+        target: /configuration/marge-bot-config.yaml
+        read_only: true
+    environment:
+      TZ: Asia/Shanghai
+    extra_hosts:
+      - "gitlab.infiscale.dev:10.10.54.15"
+      - "gitlab.infiscale.cn:172.16.15.6"

@@ -297,6 +297,32 @@ helm upgrade --install marge-bot ./charts/marge-bot \
   --set-file secrets.sshKey=marge-bot-ssh-key
 ```
 
+### Running marge-bot with Docker Compose
+
+Docker Compose can run marge-bot from this repository and mount a local config
+file into the container:
+
+```bash
+cp marge-bot-config.example.yaml marge-bot-config.yaml
+$EDITOR marge-bot-config.yaml
+docker compose up -d --build
+```
+
+The default compose file builds the local repository and tags the image as
+`marge-bot:local`. To run a prebuilt image instead, set `MARGE_IMAGE`:
+
+```bash
+MARGE_IMAGE=registry.example.com/devops/marge-bot:$(git rev-parse --short HEAD) \
+  docker compose up -d --no-build
+```
+
+Check the running service:
+
+```bash
+docker compose ps
+docker compose logs -f marge-bot
+```
+
 ### Running marge-bot in docker using HTTPS
 
 It is also possible to use Git over HTTPS instead of Git over SSH. To use HTTPS instead of SSH,

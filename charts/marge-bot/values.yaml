@@ -1,18 +1,20 @@
 replicaCount: 1
 
 image:
-  repository: smarkets/marge-bot
-  tag: stable
+  repository: harbor.infiscale.dev/workflow/merge-bot
+  tag: latest
   pullPolicy: Always
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-gitlabUrl: "http://your.gitlab.instance.com"
+gitlabUrl: "https://gitlab.infiscale.dev"
 useHttps: false
 
 extraArgs:
+  - --project-regexp=shutong/test-merge-bot
+  - --ci-timeout=60min
   - --impersonate-approvers
   - --add-tested
   - --add-reviewers

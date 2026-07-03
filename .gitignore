@@ -4,6 +4,10 @@ ENV/
 *.egg-info
 .coverage
 .pytest_cache
+.env
+marge-bot-config.yaml
+marge-bot.token
+marge-bot-ssh-key
 
 # nix stuff
 result
