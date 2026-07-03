@@ -3,6 +3,8 @@ add-reviewers: true
 add-tested: true
 impersonate-approvers: true
 ci-timeout: 60min
+target-branch-health-check: true
+oncall-fix-label: oncall fix
 gitlab-url: "https://gitlab.infiscale.dev"
 project-regexp: "shutong/test-merge-bot"
 auth-token: ""
