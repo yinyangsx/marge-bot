@@ -1,0 +1,7 @@
+Marge-bot has been deployed as {{ include "marge-bot.fullname" . }}.
+
+Check the pod status:
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+Follow logs:
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "marge-bot.fullname" . }} -f

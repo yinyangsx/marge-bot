@@ -271,6 +271,32 @@ may contain bugs.
 You can also specify a particular version as a tag, e.g.
 `smarkets/marge-bot:0.7.0`.
 
+### Building marge-bot with Dockerfile
+
+If you have local code changes and want to build an image from this repository,
+use the Dockerfile:
+
+```bash
+export IMAGE_REPO=registry.example.com/devops/marge-bot
+export IMAGE_TAG=$(git rev-parse --short HEAD)
+
+docker build -t "${IMAGE_REPO}:${IMAGE_TAG}" .
+docker push "${IMAGE_REPO}:${IMAGE_TAG}"
+```
+
+Then deploy that image with Helm:
+
+```bash
+helm upgrade --install marge-bot ./charts/marge-bot \
+  --namespace marge-bot \
+  --create-namespace \
+  --set gitlabUrl='http://your.gitlab.instance.com' \
+  --set image.repository="${IMAGE_REPO}" \
+  --set image.tag="${IMAGE_TAG}" \
+  --set-file secrets.authToken=marge-bot.token \
+  --set-file secrets.sshKey=marge-bot-ssh-key
+```
+
 ### Running marge-bot in docker using HTTPS
 
 It is also possible to use Git over HTTPS instead of Git over SSH. To use HTTPS instead of SSH,
@@ -288,18 +314,27 @@ docker run --restart=on-failure \ # restart if marge crashes because GitLab is f
 HTTPS can be used using any other deployment technique as well.
 
 ### Running marge-bot in kubernetes
-It's also possible to run marge in kubernetes, e.g. here's how you use a ktmpl
-template:
+It's also possible to run marge in kubernetes with Helm:
 
 ```bash
-ktmpl ./deploy.yml \
---parameter APP_NAME "marge-bot" \
---parameter APP_IMAGE "smarkets/marge-bot" \
---parameter KUBE_NAMESPACE "marge-bot" \
---parameter MARGE_GITLAB_URL 'http://your.gitlab.instance.com' \
---parameter MARGE_AUTH_TOKEN "$(cat marge-bot.token)" \
---parameter MARGE_SSH_KEY "$(cat marge-bot-ssh-key)" \
---parameter REPLICA_COUNT 1 | kubectl -n=${KUBE_NAMESPACE} apply --force -f -
+helm upgrade --install marge-bot ./charts/marge-bot \
+  --namespace marge-bot \
+  --create-namespace \
+  --set gitlabUrl='http://your.gitlab.instance.com' \
+  --set-file secrets.authToken=marge-bot.token \
+  --set-file secrets.sshKey=marge-bot-ssh-key
+```
+
+If you use HTTPS for Git access instead of SSH, omit `secrets.sshKey` and set
+`useHttps`:
+
+```bash
+helm upgrade --install marge-bot ./charts/marge-bot \
+  --namespace marge-bot \
+  --create-namespace \
+  --set gitlabUrl='http://your.gitlab.instance.com' \
+  --set useHttps=true \
+  --set-file secrets.authToken=marge-bot.token
 ```
 
 Once running, the bot will continuously monitor all projects that have its user as a member and

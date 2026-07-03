@@ -1,0 +1,42 @@
+replicaCount: 1
+
+image:
+  repository: smarkets/marge-bot
+  tag: stable
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+gitlabUrl: "http://your.gitlab.instance.com"
+useHttps: false
+
+extraArgs:
+  - --impersonate-approvers
+  - --add-tested
+  - --add-reviewers
+  - --add-part-of
+
+secrets:
+  create: true
+  existingSecret: ""
+  authToken: ""
+  sshKey: ""
+  keys:
+    authToken: MARGE_AUTH_TOKEN
+    sshKey: MARGE_SSH_KEY
+
+serviceAccountName: default
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
