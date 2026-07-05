@@ -17,6 +17,7 @@ extraArgs:
   - --ci-timeout=60min
   - --target-branch-health-check
   - --oncall-fix-label=oncall fix
+  - --oncall-fix-auto-approve
   - --impersonate-approvers
   - --add-tested
   - --add-reviewers

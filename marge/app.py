@@ -170,6 +170,11 @@ def _parse_config(args):  # pylint: disable=too-many-statements
         help='Label that allows an MR to merge while its target branch is unhealthy.\n',
     )
     parser.add_argument(
+        '--oncall-fix-auto-approve',
+        action='store_true',
+        help='Approve oncall fix MRs before checking approval sufficiency.\n',
+    )
+    parser.add_argument(
         '--approval-reset-timeout',
         type=time_interval,
         default='0s',
@@ -362,6 +367,7 @@ def main(args=None):
                 guarantee_final_pipeline=options.guarantee_final_pipeline,
                 target_branch_health_check=options.target_branch_health_check,
                 oncall_fix_label=options.oncall_fix_label,
+                oncall_fix_auto_approve=options.oncall_fix_auto_approve,
             ),
             batch=options.batch,
             cli=options.cli,

@@ -214,6 +214,15 @@ class MergeRequest(gitlab.Resource):
             ),
         ))
 
+    def approve(self):
+        if self._api.version().release >= (9, 2, 2):
+            approve_url = '/projects/{0.project_id}/merge_requests/{0.iid}/approve'.format(self)
+        else:
+            # GitLab botched the v4 api before 9.2.3
+            approve_url = '/projects/{0.project_id}/merge_requests/{0.id}/approve'.format(self)
+
+        return self._api.call(POST(approve_url))
+
     def close(self):
         return self._api.call(PUT(
             '/projects/{0.project_id}/merge_requests/{0.iid}'.format(self),

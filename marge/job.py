@@ -54,7 +54,7 @@ class MergeJob:
                 "Sorry, merging requests marked as auto-squash would ruin my commit tagging!"
             )
 
-        approvals = merge_request.fetch_approvals()
+        approvals = self.fetch_approvals_after_oncall_fix_approval(merge_request)
         if not approvals.sufficient:
             raise CannotMerge(
                 'Insufficient approvals '
@@ -76,16 +76,34 @@ class MergeJob:
         if self._user.id not in merge_request.assignee_ids:
             raise SkipMerge('It is not assigned to me anymore!')
 
+    def fetch_approvals_after_oncall_fix_approval(self, merge_request):
+        approvals = merge_request.fetch_approvals()
+        if not self._options.oncall_fix_auto_approve:
+            return approvals
+
+        if not self.is_oncall_fix_mr(merge_request) or approvals.sufficient:
+            return approvals
+
+        if self._user.id in approvals.approver_ids:
+            log.info('MR !%s already has approval from marge-bot', merge_request.iid)
+            return approvals
+
+        log.info('Approving oncall fix MR !%s before checking approval sufficiency', merge_request.iid)
+        merge_request.approve()
+        return merge_request.fetch_approvals()
+
+    def is_oncall_fix_mr(self, merge_request):
+        return self._options.oncall_fix_label in merge_request.labels
+
     def ensure_target_branch_is_healthy(self, merge_request):
         if not self._options.target_branch_health_check:
             return
 
-        oncall_fix_label = self._options.oncall_fix_label
-        if oncall_fix_label in merge_request.labels:
+        if self.is_oncall_fix_mr(merge_request):
             log.info(
                 'MR !%s has oncall fix label %r; skipping target branch health gate',
                 merge_request.iid,
-                oncall_fix_label,
+                self._options.oncall_fix_label,
             )
             return
 
@@ -94,7 +112,7 @@ class MergeJob:
             raise SkipMerge(
                 'Target branch {0.target_branch} is unhealthy; only MRs labeled {1!r} can merge.'.format(
                     merge_request,
-                    oncall_fix_label,
+                    self._options.oncall_fix_label,
                 )
             )
 
@@ -500,6 +518,7 @@ JOB_OPTIONS = [
     'guarantee_final_pipeline',
     'target_branch_health_check',
     'oncall_fix_label',
+    'oncall_fix_auto_approve',
 ]
 
 
@@ -517,6 +536,7 @@ class MergeJobOptions(namedtuple('MergeJobOptions', JOB_OPTIONS)):
             approval_timeout=None, embargo=None, ci_timeout=None, fusion=Fusion.rebase,
             use_no_ff_batches=False, use_merge_commit_batches=False, skip_ci_batches=False,
             guarantee_final_pipeline=False, target_branch_health_check=False, oncall_fix_label='oncall fix',
+            oncall_fix_auto_approve=False,
     ):
         approval_timeout = approval_timeout or timedelta(seconds=0)
         embargo = embargo or IntervalUnion.empty()
@@ -536,6 +556,7 @@ class MergeJobOptions(namedtuple('MergeJobOptions', JOB_OPTIONS)):
             guarantee_final_pipeline=guarantee_final_pipeline,
             target_branch_health_check=target_branch_health_check,
             oncall_fix_label=oncall_fix_label,
+            oncall_fix_auto_approve=oncall_fix_auto_approve,
         )
 
 

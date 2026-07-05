@@ -110,6 +110,9 @@ optional arguments:
   --oncall-fix-label ONCALL_FIX_LABEL
                         Label that allows an MR to merge while its target branch is unhealthy.
                            [env var: MARGE_ONCALL_FIX_LABEL] (default: oncall fix)
+  --oncall-fix-auto-approve
+                        Approve oncall fix MRs before checking approval sufficiency.
+                           [env var: MARGE_ONCALL_FIX_AUTO_APPROVE] (default: False)
   --approval-reset-timeout APPROVAL_RESET_TIMEOUT
                         How long to wait for approvals to reset after pushing.
                         Only useful with the "new commits remove all approvals" option in a project's settings.
@@ -165,6 +168,7 @@ gitlab-url: "https://gitlab.example.com"
 impersonate-approvers: true
 target-branch-health-check: false
 oncall-fix-label: oncall fix
+oncall-fix-auto-approve: false
 project-regexp: .*
 # choose one way of specifying the SSH key
 #ssh-key: KEY
@@ -547,6 +551,11 @@ eligible while the target branch is unhealthy. The default label is
 `oncall fix`. In single-MR mode marge-bot keeps scanning the already ordered
 queue until it finds the first eligible merge request, so earlier normal merge
 requests do not block an oncall fix merge request behind them.
+
+If `--oncall-fix-auto-approve` is enabled, marge-bot approves an oncall fix MR
+with its own GitLab user before checking whether the MR has sufficient
+approvals. MRs without the oncall fix label are never auto-approved by this
+option.
 
 
 ## Batching Merge Requests

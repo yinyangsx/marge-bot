@@ -200,6 +200,91 @@ class TestJob:
             merge_job.ensure_mergeable_mr(merge_request)
 
         merge_request.fetch_approvals.assert_called_once()
+        merge_request.approve.assert_not_called()
+        assert 'Insufficient approvals' in str(exc_info.value)
+
+    def test_ensure_mergeable_mr_approves_oncall_fix(self):
+        merge_job = self.get_merge_job(
+            options=MergeJobOptions.default(
+                oncall_fix_label='production fix',
+                oncall_fix_auto_approve=True,
+            ),
+        )
+        merge_request = self._mergeable_merge_request(merge_job, labels=['production fix'])
+        first_approvals = MagicMock(sufficient=False, approver_ids=[])
+        second_approvals = MagicMock(sufficient=True)
+        merge_request.fetch_approvals.side_effect = [first_approvals, second_approvals]
+
+        merge_job.ensure_mergeable_mr(merge_request)
+
+        merge_request.approve.assert_called_once_with()
+        assert merge_request.fetch_approvals.call_count == 2
+
+    def test_ensure_mergeable_mr_does_not_auto_approve_by_default(self):
+        merge_job = self.get_merge_job(
+            options=MergeJobOptions.default(oncall_fix_label='production fix'),
+        )
+        merge_request = self._mock_merge_request(
+            assignee_ids=[merge_job._user.id],
+            state='opened',
+            work_in_progress=False,
+            squash=False,
+            labels=['production fix'],
+        )
+        merge_request.fetch_approvals.return_value.sufficient = False
+
+        with pytest.raises(CannotMerge) as exc_info:
+            merge_job.ensure_mergeable_mr(merge_request)
+
+        merge_request.approve.assert_not_called()
+        merge_request.fetch_approvals.assert_called_once()
+        assert 'Insufficient approvals' in str(exc_info.value)
+
+    def test_ensure_mergeable_mr_does_not_approve_non_oncall_fix(self):
+        merge_job = self.get_merge_job(
+            options=MergeJobOptions.default(
+                oncall_fix_label='production fix',
+                oncall_fix_auto_approve=True,
+            ),
+        )
+        merge_request = self._mock_merge_request(
+            assignee_ids=[merge_job._user.id],
+            state='opened',
+            work_in_progress=False,
+            squash=False,
+            labels=[],
+        )
+        merge_request.fetch_approvals.return_value.sufficient = False
+
+        with pytest.raises(CannotMerge) as exc_info:
+            merge_job.ensure_mergeable_mr(merge_request)
+
+        merge_request.approve.assert_not_called()
+        merge_request.fetch_approvals.assert_called_once()
+        assert 'Insufficient approvals' in str(exc_info.value)
+
+    def test_ensure_mergeable_mr_does_not_reapprove_oncall_fix(self):
+        merge_job = self.get_merge_job(
+            options=MergeJobOptions.default(
+                oncall_fix_label='production fix',
+                oncall_fix_auto_approve=True,
+            ),
+        )
+        merge_request = self._mock_merge_request(
+            assignee_ids=[merge_job._user.id],
+            state='opened',
+            work_in_progress=False,
+            squash=False,
+            labels=['production fix'],
+        )
+        merge_request.fetch_approvals.return_value.sufficient = False
+        merge_request.fetch_approvals.return_value.approver_ids = [merge_job._user.id]
+
+        with pytest.raises(CannotMerge) as exc_info:
+            merge_job.ensure_mergeable_mr(merge_request)
+
+        merge_request.approve.assert_not_called()
+        merge_request.fetch_approvals.assert_called_once()
         assert 'Insufficient approvals' in str(exc_info.value)
 
     def test_ensure_mergeable_mr_wip(self):
@@ -305,6 +390,7 @@ class TestMergeJobOptions:
             guarantee_final_pipeline=False,
             target_branch_health_check=False,
             oncall_fix_label='oncall fix',
+            oncall_fix_auto_approve=False,
         )
 
     def test_default_ci_time(self):
